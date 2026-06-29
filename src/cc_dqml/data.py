@@ -25,6 +25,24 @@ def _sample_ball(rng: np.random.Generator, count: int, dim: int, radius: float) 
     return directions * radii[:, None]
 
 
+def _sample_unique_division_centers(
+    rng: np.random.Generator,
+    n_clusters: int,
+    n_features: int,
+    radius: float,
+) -> np.ndarray:
+    """Sample unique corners from the 2**n_features possible divisions."""
+
+    n_divisions = 2**n_features
+    if n_clusters > n_divisions:
+        raise ValueError("n_clusters cannot exceed 2**n_features unique divisions.")
+
+    division_indices = rng.choice(n_divisions, size=n_clusters, replace=False)
+    bit_positions = np.arange(n_features)
+    signs = 2 * ((division_indices[:, None] >> bit_positions) & 1) - 1
+    return radius * signs.astype(float)
+
+
 def generate_synthetic_dataset(settings: DataSettings, seed: int) -> DatasetSplit:
     """Generate clustered 8D binary data similar to Appendix B."""
 
@@ -38,9 +56,11 @@ def generate_synthetic_dataset(settings: DataSettings, seed: int) -> DatasetSpli
     rng = np.random.default_rng(seed)
     samples_per_cluster = settings.n_samples // settings.n_clusters
 
-    centers = rng.choice(
-        [-settings.sphere_radius, settings.sphere_radius],
-        size=(settings.n_clusters, settings.n_features),
+    centers = _sample_unique_division_centers(
+        rng,
+        settings.n_clusters,
+        settings.n_features,
+        settings.sphere_radius,
     )
     labels = np.array([-1.0, 1.0] * (settings.n_clusters // 2), dtype=float)
     if len(labels) != settings.n_clusters:
