@@ -1,4 +1,4 @@
-"""PennyLane CC-DQML circuit prototype."""
+"""PennyLane CC-DQML circuit blocks based on Fig. 4b."""
 
 from __future__ import annotations
 
@@ -12,12 +12,12 @@ PARAMETER_NAMES = ("conv", "pool", "feedforward", "interpret")
 
 
 def parameter_shapes(convolutional_sub_layers: int) -> dict[str, tuple[int, ...]]:
-    """Return trainable parameter shapes for the Sprint 1 CC-DQML circuit."""
+    """Return trainable parameter shapes for the Fig. 4b-style CC-DQML circuit."""
 
     return {
-        "conv": (convolutional_sub_layers, 2, 3, 3),
-        "pool": (2, 2),
-        "feedforward": (2, 2),
+        "conv": (convolutional_sub_layers, 2, 4),
+        "pool": (2, 3, 4),
+        "feedforward": (4, 4),
         "interpret": (4,),
     }
 
@@ -51,44 +51,85 @@ def parameters_to_dict(
 
 
 def _embed_features(x: pnp.ndarray) -> None:
-    for wire in range(N_QUBITS):
-        qml.RY(x[wire], wires=wire)
-        qml.RZ(0.5 * x[wire], wires=wire)
+    for offset in (0, 4):
+        qpu_wires = tuple(range(offset, offset + 4))
+        qpu_features = x[offset : offset + 4]
+
+        for wire, feature in zip(qpu_wires, qpu_features, strict=True):
+            qml.Hadamard(wires=wire)
+            qml.RZ(feature, wires=wire)
+
+        ring_pairs = ((0, 1), (1, 2), (2, 3), (3, 0))
+        for left, right in ring_pairs:
+            qml.IsingZZ(
+                qpu_features[left] * qpu_features[right],
+                wires=(qpu_wires[left], qpu_wires[right]),
+            )
 
 
-def _two_qubit_block(params: pnp.ndarray, wires: tuple[int, int]) -> None:
-    qml.RY(params[0], wires=wires[0])
-    qml.RY(params[1], wires=wires[1])
-    qml.CNOT(wires=wires)
-    qml.RZ(params[2], wires=wires[1])
-    qml.CNOT(wires=(wires[1], wires[0]))
+def _convolution_block(params: pnp.ndarray, wires: tuple[int, int], local_pair: tuple[int, int]) -> None:
+    for wire in wires:
+        qml.Hadamard(wires=wire)
+    qml.CZ(wires=wires)
+    qml.RX(params[local_pair[0]], wires=wires[0])
+    qml.RX(params[local_pair[1]], wires=wires[1])
 
 
 def _convolution_layer(params: pnp.ndarray) -> None:
-    qpu_pairs = (
-        ((0, 1), (2, 3), (1, 2)),
-        ((4, 5), (6, 7), (5, 6)),
-    )
-    for qpu_index, pairs in enumerate(qpu_pairs):
-        for pair_index, wires in enumerate(pairs):
-            _two_qubit_block(params[qpu_index, pair_index], wires)
+    local_pairs = ((0, 1), (2, 3), (1, 2))
+    for qpu_index, offset in enumerate((0, 4)):
+        for local_pair in local_pairs:
+            wires = (offset + local_pair[0], offset + local_pair[1])
+            _convolution_block(params[qpu_index], wires, local_pair)
+
+
+def _controlled_pool_block(
+    params: pnp.ndarray,
+    control_wire: int,
+    target_wire: int,
+) -> None:
+    """Equivalent of measuring control and applying Z/X gates by outcome.
+
+    params are ordered as (z_if_0, x_if_0, z_if_1, x_if_1), matching the four
+    outcome-dependent parameters described for each Fig. 4b pooling block.
+    """
+
+    qml.PauliX(wires=control_wire)
+    qml.CRZ(params[0], wires=(control_wire, target_wire))
+    qml.CRX(params[1], wires=(control_wire, target_wire))
+    qml.PauliX(wires=control_wire)
+
+    qml.CRZ(params[2], wires=(control_wire, target_wire))
+    qml.CRX(params[3], wires=(control_wire, target_wire))
 
 
 def _pool_and_classically_communicate(
     pool_params: pnp.ndarray,
     feedforward_params: pnp.ndarray,
 ) -> None:
-    # Statevector simulation uses the circuit-equivalent controlled operations
-    # for mid-circuit measurement plus classical feedforward.
-    qml.CRY(pool_params[0, 0], wires=(0, 1))
-    qml.CRY(pool_params[0, 1], wires=(1, 3))
-    qml.CRY(pool_params[1, 0], wires=(4, 5))
-    qml.CRY(pool_params[1, 1], wires=(5, 7))
+    # Local Fig. 4b pooling: 4 qubits -> 2 qubits -> 1 readout qubit per QPU.
+    local_pool_blocks = (
+        (0, 1, 0),
+        (2, 3, 1),
+        (1, 3, 2),
+        (4, 5, 0),
+        (6, 7, 1),
+        (5, 7, 2),
+    )
+    for control, target, block_index in local_pool_blocks:
+        qpu_index = 0 if control < 4 else 1
+        _controlled_pool_block(pool_params[qpu_index, block_index], control, target)
 
-    qml.CRY(feedforward_params[0, 0], wires=(1, 7))
-    qml.CRZ(feedforward_params[0, 1], wires=(1, 7))
-    qml.CRY(feedforward_params[1, 0], wires=(5, 3))
-    qml.CRZ(feedforward_params[1, 1], wires=(5, 3))
+    # CC-DQML cross-QPU feedforward. These are the statevector equivalents of
+    # measured classical outcomes controlling Z/X gates on the other QPU.
+    cross_blocks = (
+        (0, 7),
+        (1, 7),
+        (4, 3),
+        (5, 3),
+    )
+    for block_index, (control, target) in enumerate(cross_blocks):
+        _controlled_pool_block(feedforward_params[block_index], control, target)
 
 
 def make_cc_dqml_qnode() -> qml.QNode:
