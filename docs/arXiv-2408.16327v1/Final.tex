@@ -1,0 +1,335 @@
+\documentclass[aps,prx,reprint,amsmath,amssymb,superscriptaddress,nobibnotes,showpacs]{revtex4-2}
+\usepackage{kotex}
+\usepackage{graphicx}
+\usepackage{color}
+\usepackage[normalem]{ulem}
+\usepackage{amsmath}
+\usepackage{mathtools}
+\usepackage{natbib}
+\usepackage{hyperref}
+\usepackage{float}
+\usepackage{multirow}
+\usepackage{array}
+\usepackage{xcolor}	
+\usepackage{color, colortbl}
+\usepackage{booktabs}
+\hypersetup{
+    colorlinks=true,
+    linkcolor=blue,
+    citecolor = blue,
+    filecolor=magenta,      
+    urlcolor=blue,
+    pdfpagemode=FullScreen,
+    }
+
+\begin{document}
+
+\title{Distributed quantum machine learning via classical communication}
+
+
+\author{Kiwmann Hwang}
+\email{kiwmann.hwang@gmail.com}
+\affiliation{Center for Quantum Technology, Korea Institute of Science and Technology (KIST), Seoul 02792, Korea}
+\affiliation{Department of Physics, Yonsei University, Seoul 03722, Korea}
+\affiliation{Department of Physics, Korea University, Seoul 02841, Korea}
+\author{Hyang-Tag Lim}
+\affiliation{Center for Quantum Technology, Korea Institute of Science and Technology (KIST), Seoul 02792, Korea}
+\affiliation{Division of Quantum Information, KIST School, Korea University of Science and Technology, Seoul 02792, Korea}
+\author{Yong-Su Kim}
+\affiliation{Center for Quantum Technology, Korea Institute of Science and Technology (KIST), Seoul 02792, Korea}
+\affiliation{Division of Quantum Information, KIST School, Korea University of Science and Technology, Seoul 02792, Korea}
+\author{Daniel K. Park}
+\affiliation{Department of Applied Statistics, Yonsei University, Seoul 03722, Korea}
+\affiliation{Department of Statistics and Data Science, Yonsei University, Seoul 03722, Korea}
+\author{Yosep Kim}
+\email{yosep9201@gmail.com}
+\affiliation{Department of Physics, Korea University, Seoul 02841, Korea}
+
+
+
+\date{\today}
+\begin{abstract}
+Quantum machine learning is emerging as a promising application of quantum computing due to its distinct way of encoding and processing data. It is believed that large-scale quantum machine learning demonstrates substantial advantages over classical counterparts, but a reliable scale-up is hindered by the fragile nature of quantum systems. Here we present an experimentally accessible distributed quantum machine learning scheme that integrates quantum processor units via classical communication. As a demonstration, we perform data classification tasks on 8-dimensional synthetic datasets by emulating two 4-qubit processors and employing quantum convolutional neural networks. Our results indicate that incorporating classical communication notably improves classification accuracy compared to schemes without communication. Furthermore, at the tested circuit depths, we observe that the accuracy with classical communication is no less than that achieved with quantum communication. Our work provides a practical path to demonstrating large-scale quantum machine learning on intermediate-scale quantum processors by leveraging classical communication that can be implemented through currently available mid-circuit measurements.
+\end{abstract} 
+\maketitle
+
+Quantum superposition and entanglement have revolutionized the paradigm of data encoding and processing, with prototypical quantum algorithms exhibiting computational advantages over classical counterparts~\cite{shor1999polynomial,grover1996fast}.
+While a clear computational advantage of quantum processors has not yet been experimentally demonstrated, it is strongly believed that this will be realized along with the development of reliable large-scale quantum processors~\cite{arute2019quantum,pan2022solving,kim2023evidence,tindall2024efficient}. 
+Scaling quantum processors involves various strategies, such as increasing a processor's qubit density or integrating multiple processors using distributed architectures~\cite{kimble2008quantum,monroe2014large,bravyi2022future}.
+Recent studies underscore that distributed quantum computing is advantageous not only for addressing larger-scale computational problems~\cite{peng2020simulating,eddins2022doubling,piveteau2023circuit} but also for mitigating errors~\cite{katabarwa2024early,avron2021quantum,Lee_2023}.
+Accordingly, there is a growing emphasis on adapting known quantum algorithms into distributed forms, including Grover's algorithm~\cite{avron2021quantum,qiu2022distributed}, phase estimation~\cite{li2017application}, and Shor's algorithm~\cite{yimsiriwattana2004distributed,xiao2023distributed}.
+
+
+\begin{figure}[b!]
+\centering
+\includegraphics[width=\linewidth]{Fig1_final.eps}
+\caption{\textbf{Schematic of classical communication.} Quantum processor units communicate using mid-circuit measurements and fast feedforward operations. The measurement outcome from one processor determines whether to apply gate $U_0$ or $U_1$ to another processor.
+}
+\label{fig1}
+\end{figure}
+
+
+\begin{figure*}
+\centering
+\includegraphics[width=\linewidth]{Fig2_final.eps}
+\caption{\textbf{Distributed quantum machine learning (DQML) models.} The architecture includes an embedding layer that maps data into a Hilbert space, convolutional layers that intertwine data within each quantum processor unit (QPU), and pooling layers that reduce dimensionality. The DQML schemes considered in this work are illustrated at the bottom, with colored operations highlighting the differences. The convolutional layer consists of brick-wall structured convolutional sub-layers, which are repeated to increase the number of training parameters. Classical communication is implemented through feedforward operations
+between QPUs, while quantum communication is facilitated by nonlocal two-qubit operations within the convolutional sub-layers. }
+\label{fig2}
+\end{figure*}
+
+
+Quantum machine learning, which takes advantage of  quantum contextuality~\cite{deng2017quantum, bowles2023contextuality} and the exponentially large dimensionality of quantum systems~\cite{biamonte2017quantum,havlivcek2019supervised,cerezo2022challenges, abbas2021power}, is no exception. Several practical distributed quantum machine learning (DQML) schemes have been proposed to boost the capabilities of noisy intermediate-scale quantum processors. These schemes are delivering benefits across various domains: processing larger-scale data~\cite{pira2023invitation,marshall2023high}, accelerating training convergence~\cite{du2021accelerating, chen2021federated}, and ensuring data privacy among multiple parties~\cite{neumann2022distributed}. 
+
+
+Most existing DQML schemes rely on executing tasks separately on a single quantum processor~\cite{pira2023invitation,du2021accelerating,chen2021federated,marshall2023high}. While this approach does provide linear increases in computational capacity, greater advantages would be realized by  interconnecting multiple processors through quantum or classical communication. Quantum communication, for example, enables universal quantum operations between separate processors~\cite{gottesman1999demonstrating,eisert2000optimal}. However, achieving high-fidelity entanglement distribution remains a challenge and is currently limited to proof-of-principle experiments~\cite{chou2018deterministic,cacciapuoti2019quantum,zhong2021deterministic}. 
+In contrast, classical communication can be reliably implemented within the coherence time, making it more feasible across various physical platforms~\cite{lis2023Midcircuit,corcoles2021exploiting}. While classical communication may offer less advantages than quantum communication~\cite{eddins2022doubling}, it has been shown to exponentially reduce overhead in certain applications compared to schemes without communication~\cite{piveteau2023circuit}. 
+
+In this work, we propose a practical and effective approach for implementing DQML by leveraging classical communication. Our circuit capacity analysis confirms that at shallow depths, our classical communication scheme can produce a range of quantum operations with expressiveness comparable to that of a quantum communication scheme. Furthermore, we observe that, for binary classification tasks on 8-dimensional synthetic datasets, our classical communication scheme significantly outperforms a no-communication scheme and even closely competes with a quantum communication scheme at the tested circuit depths. These results highlight the efficacy of classical communication in expanding the capabilities of small quantum processors.\\
+
+
+
+
+\begin{figure*}
+\centering
+\includegraphics[width=0.99\linewidth]{Fig3_final.eps}
+\caption{\textbf{Circuit capacity analysis.} \textbf{a}, Each set is a collection of implementable circuits corresponding to  no communication, classical communication, and quantum communication schemes. Here, the blue and red blocks represent arbitrary unitary operations and controlled one-qubit operations, respectively, and the symbol $\subset$ indicates their subset relationships. \textbf{b}, Two equivalent circuits: (top) a classical feedforward operation and (bottom) a measurement after two controlled gate operations. \textbf{c}, The effective dimension of using two 2-qubit or 4-qubit QPUs
+is estimated for different number of repeated convolutional sub-layers $L$ in Fig.~\ref{fig2}. Note that as $L$ increases, the effective dimension will eventually saturate for all the DQML schemes~\cite{haug2021capacity}. They are parameterized using the same embedding, convolutional, and pooling circuit blocks in Fig.~\ref{fig4}\textbf{b}. 
+}
+\label{fig3}
+\end{figure*}
+
+
+
+\begin{figure*}
+
+\centering
+\includegraphics[width=\linewidth]{Fig4_final.eps}
+\caption{\textbf{Binary classification using DQML.} \textbf{a}, A synthetic dataset's attributes, $\boldsymbol{x}=(x_1$, $x_2$, $x_3$), form clusters in a Cartesian space, with blue and red spheres representing different labels for each cluster. Although the plot displays a 3-dimensional dataset, we employ an 8-dimensional dataset for DQML demonstration. 
+\textbf{b}, To embed the 8-dimensional dataset, two green blocks are deployed: one block per QPU in DQML, and two blocks for a single QPU in non-DQML. The blue block forms the brick-wall convolutional sub-layers depicted at the bottom of Fig.~\ref{fig2}, while the red block constructs the pooling layers. The number of parameters in each convolutional sub-layer matches the number of qubits involved, with parameter $\theta_i$ assigned based on the corresponding qubit index. Note that the parameters in the red block depend on the measurement outcome $o$, leading to four parameters per block.
+\textbf{c, d}, Binary classification of the 8-dimensional dataset is numerically conducted with two 4-qubit QPUs for DQML and a single 4-qubit QPU for non-DQML. The dataset consists of 2048 instances, with 1536 used for training and 512 for validation. Each training iteration processes a batch of 512 instances. See Appendix~\ref{appB} for more details. The results in panels \textbf{c} and \textbf{d} are obtained with $L$=9 convolutional sub-layers and 1000 training iterations, respectively. The solid lines denote the mean, and the shaded regions and error bars represent the standard deviation of 10 trials with random initial parameters. }
+
+\label{fig4}
+\end{figure*}
+
+\noindent\textbf{Schematic}\\
+Figure~\ref{fig1} illustrates a general schematic of classical communication between quantum processor units (QPUs).
+When a mid-circuit measurement is performed on a QPU, it captures partial information about the data in process.
+This information is then transferred to another QPU through a conditional feedforward operation, establishing shared classical correlations between them. While quantum machine learning is renowned for exploiting quantum nature, establishing these classical correlations can aid data processing by increasing the utilizable parameter space of a model. 
+
+The classical communication structure mirrors the pooling operation of quantum convolutional neural networks (QCNN)~\cite{cong2019quantum}, involving mid-circuit measurements followed by feedforward operations. Inspired by this similarity, we propose a DQML scheme and the structure is illustrated at the top of Fig.~\ref{fig2}. Training data is loaded into QPUs via embedding layers, and both convolutional layers and pooling layers are parameterized for training. Note that the pooling layers reduce the number of engaged qubits through mid-circuit measurements. 
+
+The DQML schemes can be classified into three categories according to communication methods: no communication (NC), classical communication (CC), and quantum communication (QC). They are depicted at the bottom of Fig.~\ref{fig2}. Classical communication is implemented through feedforward operations
+between QPUs, while quantum communication is facilitated by nonlocal two-qubit operations within convolutional sub-layers. In the following sections, we will contrast the CC-DQML scheme with the non-DQML, NC-DQML and QC-DQML schemes to demonstrate the advantages of using classical communication. It is noteworthy that the NC-DQML scheme does not require running on two QPUs simultaneously and can instead be implemented by
+combining and post-processing results from two separate runs on a single QPU. \\
+
+
+\noindent\textbf{Circuit capacity}\\
+The performance of a machine learning model hinges on both its circuit capacity and its trainability. More specifically, a model with greater capacity---meaning it can produce more diverse quantum operations---is advantageous as long as it remains trainable. We first compare the circuit capacity of NC-, CC-, and QC-DQML schemes by examining their subset relationships. Given that the two operations in Fig.~\ref{fig3}\textbf{b} are equivalent, we can tell that the sets of implementable circuits in Fig.~\ref{fig3}\textbf{a} correspond to a part of the convolutional and pooling layers of each DQML scheme shown in Fig.~\ref{fig2}. 
+
+In the set of NC circuits, the blue blocks, capable of performing arbitrary unitary operations, make the controlled gates of the red blocks redundant. Moreover, because the red blocks in the set of CC circuits can function as identity operations, we can conclude that the set of NC circuits is a subset of the set of CC circuits. However, this relationship does not apply in reverse because local unitary operations within each processor cannot replace the two-qubit operations between processors. The same logic applies when comparing the sets of CC and QC circuits. This subset relationship can be extended to processors with more than two qubits, demonstrating that classical communication provides greater circuit capacity than no communication, though still less than that offered by quantum communication.
+
+
+We now quantitatively compare the circuit capacity by analyzing the effective dimension~\cite{abbas2021power}, defined as the maximum rank of the Fisher information matrix over all possible training parameter sets $\boldsymbol{\theta} \in \boldsymbol{\Theta}$:
+\begin{equation}
+\label{ED}
+\text{ED}:=\underset{\boldsymbol{\theta} \in \boldsymbol{\Theta}}{\max}\ r_{\boldsymbol{\theta}},
+\end{equation}
+where $r_{\boldsymbol{\theta}}$ is the rank of Fisher information matrix for a given parameter setting  $\boldsymbol{\theta}$. The Fisher information quantifies how sensitive an observable or a training loss function is to changes in the training parameters, so the effective dimension reflects the number of independent and significant training parameters. Thereby, the effective dimension offers a quantitative measure of circuit capacity by evaluating the dimensionality of information geometry. Specifically, we obtain the Fisher information matrix defined as:
+\begin{equation}
+\label{fisher}
+F_{ij}(\boldsymbol{\theta})=\frac{1}{N} \sum_{n=1}^{N} \frac{\partial}{\partial \theta_i} \log p(\boldsymbol{x}^{n}, \boldsymbol{y}^{n} ; \boldsymbol{\theta}) \frac{\partial}{\partial \theta_j} \log p(\boldsymbol{x}^{n}, \boldsymbol{y}^{n} ; \boldsymbol{\theta}),
+\end{equation}
+where $\theta_i$ denotes the $i$-th training parameter of the  convolutional and pooling layers, and $p(\boldsymbol{x}^n,\boldsymbol{y}^n;\boldsymbol{\theta})$ represents the joint probability distribution of the $n$-th data instance $\boldsymbol{x}^n$ and its corresponding output $\boldsymbol{y}^n$.
+
+Figure~\ref{fig3}\textbf{c} presents numerically estimated effective dimensions of DQML schemes with respect to $N=500$ Haar-distributed random data. The maximum rank of the Fisher information is obtained from the ranks calculated using 20 random training parameter sets $\boldsymbol{\theta}$ sampled from uniform distribution. The results suggest that CC-DQML generally exhibits a larger effective dimension and thus greater capacity compared to NC-DQML. Additionally, with a small number of convolutional sub-layers ($L$) that constitute a single convolutional layer in Fig.~\ref{fig2}, we observe that the effective dimension of CC-DQML matches that of QC-DQML, indicating that classical communication can be just as effective as quantum communication at shallow depths. Detailed information on the estimation and further analysis of the effective dimension are available in Appendix~\ref{appA}. 
+
+It is important to clarify that while increasing circuit capacity can enhance the potential for a lower global minimum of training loss functions, the expanded parameter space may hinder trainability, making it more difficult to find the global minimum and achieve fast convergence~\cite{caro2022generalization,haug2021capacity,holmes2022connecting}. However, there is some evidence suggesting that our CC-DQML scheme would exhibit decent trainability. Firstly, the QCNN architecture that inspired our scheme is known for its high trainability and its ability to mitigate exponentially vanishing gradients~\cite{pesah2021absence}. Secondly, the classical approach of splitting circuits is known to result in a larger variance of gradient~\cite{tuysuz2023classical}.\\
+
+
+\noindent\textbf{Binary classification}\\
+We now turn to demonstrate the training performance of DQML schemes through numerical emulation using PennyLane~\cite{bergholm2018pennylane}.
+Specifically, we benchmark their classification accuracy on binary classification tasks using 4-qubit QPUs.
+Commonly used datasets like MNIST and Iris are easily trainable with even a single 4-qubit QPU~\cite{hur2022quantum, abbas2021power}, so we opt to use 8-dimensional synthetic datasets to better showcase the utility of CC-DQML. The eight attributes of a dataset comprise 32 clusters distributed across an 8-dimensional space, each placed within one of 32 divisions randomly selected from a total of $2^8 = 256$ possible divisions. The binary labels for these clusters are also assigned randomly, intentionally reducing the linear correlation between individual attributes and labels. To provide clarity, a simplified 3-dimensional synthetic dataset is depicted in Fig.~\ref{fig4}\textbf{a}. Further details of the dataset can be found in Appendix~\ref{appB}. The eight attributes are divided into two sets, and each set is assigned to the embedding layer of each QPU. In the case of non-DQML using a single 4-qubit QPU, the embedding layer is repeated twice to accommodate eight attributes onto the four qubits.
+
+For training, we use the DQML models depicted in Fig.~\ref{fig2}, employing the circuit blocks in Fig.~\ref{fig4}\textbf{b}, which have demonstrated high classification accuracy in previous works~\cite{hur2022quantum,sim2019expressibility}. The information of data is compressed by two consecutive pooling layers, and each QPU yields one bit of information through single-qubit measurements (Fig.~\ref{fig2}). To effectively integrate the two-bit information, we adapt interpret function as follows:
+\begin{equation}
+\label{interpret}
+f_\mathrm{int}=w_0 P[00]+w_1 P[01]+w_2 P[10]+w_3 P[11],
+\end{equation}
+where $P[ij]$ denotes the probability of measuring outcomes
+$i$ and $j$ from each QPU, and $\boldsymbol{w}=(w_0,w_1,w_2,w_3)$ represents the associated weights. These weights $w$ are optimized to achieve the best interpretation along with the gate parameters of the convolutional and pooling layers for each training iteration. The least squares loss function for training is defined using the interpret function as $\mathcal{L}\propto\sum_n (f^n_\mathrm{label}-f^n_\mathrm{int})^2$, where $f^n_\mathrm{label}\in\{-1,1\}$ represents the label of the $n$-th data instance. Note that using the interpret function instead of traditional parity measurements significantly improves classification accuracy, especially for NC-DQML and CC-DQML. We attribute this to the lower connectivity of the schemes compared to QC-DQML. See Appendix~\ref{appC} for more details.
+
+Figures~\ref{fig4}\textbf{c} and \textbf{d} exhibit the classification accuracy. With $L$=9 convolutional sub-layers and after 1000 training iterations, both CC-DQML and QC-DQML achieve comparable classification accuracy within a standard deviation, around 96\%, which is significantly higher than the approximately 88\% accuracy of NC-DQML and 78\% of non-DQML. The faster convergence of QC-DQML relative to CC-DQML can be attributed to its lower variance in the non-zero Fisher information spectrum, which reduces gradient vanishing in the optimization landscape~\cite{haug2021capacity,huembeli2021characterizing} (see Appendix~\ref{appD} for the analysis of the Fisher information spectrum). This indicates that quantum communication still holds an advantage over classical communication. Nonetheless, CC-DQML can generate optimal circuits with classification accuracy similar to those of QC-DQML with various number of sub-layers, and this implies that, in some cases like ours, classical communication can be just as effective as quantum communication. To demonstrate that these results are not limited to a single dataset, we have included additional training results with other datasets in Appendix~\ref{appB}, along with the results using 15 and 20 convolutional sub-layers.\\
+
+
+
+%Another interesting finding is that every DQML scheme at $L=3$ demonstrates higher accuracy compared to the non-DQML scheme at $L=7$, despite the non-DQML possessing more parameters. While the modified data embedding of non-DQML might lead to increased accuracy, the same holds true for the other DQML schemes as well.This illustrates that an arithmetic increase in the space of NC-DQML can also provide advantages for quantum machine learning. 
+
+
+% It is noteworthy that every DQML scheme at $L=3$ demonstrates higher accuracy compared to the non-DQML scheme at $L=7$, despite the non-DQML possessing more parameters. While the modified data embedding of non-DQML might lead to increased accuracy, the same holds true for the other DQML schemes as well.
+
+
+
+
+\noindent\textbf{Discussion}\\
+We have introduced a practical and effective DQML scheme for processing larger-scale data by integrating separate quantum processor units. Our numerical results in Fig.~\ref{fig4}\textbf{d} demonstrate that DQML schemes with $L$=3 convolutional sub-layers achieve higher classification accuracy than a non-DQML scheme with $L$=7, despite similar number of training parameters. Especially, NC-DQML's superior performance highlights the benefits of distributed approaches, whether across multiple processors or multiple runs within a single processor.
+
+The similar performance of CC-DQML and QC-DQML suggests that classical communication can serve as a viable alternative to quantum communication. While QC-DQML may outperform with datasets featuring highly correlated attributes or requiring extensive parameter dimensionality, classical communication offers a feasible solution given current technology constraints in the noisy intermediate-scale Quantum (NISQ) era. Further research is needed to optimize CC-DQML strategies for data division and embedding, as well as to identify the best interpret function for post-processing outcomes from each processor. In addition, exploring DQML schemes with more than two processors could reveal further advantages and applications. We hope our work provides a practical pathway for handling high-dimensional datasets and expanding the usable quantum space, helping to overcome current limitations in qubit availability.\\
+
+\noindent\textbf{Acknowledgements}\\
+This work was supported by the National Research Foundation of Korea (NRF) grant funded by the Korea government (MSIT) (Nos. RS-2024-00432563, RS-2024-00404854, 2022M3E4A1043330, 2022M3K4A1097123, 2023M3K5A1094805, and 2023M3K5A1094813), Institute for Information \& communications Technology Promotion (IITP) grant funded by the Korea government (MSIT) (No. 2019-0-00003), the Yonsei University Research Fund (No. 2024-22-0147), and the KIST research programs (Nos. 2E32941 and 2E32971). 
+
+
+\newpage
+
+
+\appendix
+
+\section{Effective dimension estimation}\label{appA}
+To assess the general characteristics of our DQML models in Fig.~\ref{fig2}, we estimate their effective dimension using Haar-distributed random datasets. For this estimation, the embedding layer of each QPU is constructed using Haar random unitaries, while the remaining circuit blocks are configured as illustrated in Fig.~\ref{fig4}\textbf{b}. Note that, to obtain the results presented in Fig.~\ref{fig3}\textbf{c}, a single pooling layer is applied for two 2-qubit QPUs, whereas two pooling layers are used for two 4-qubit QPUs. The first step in estimating the effective dimension involves calculating the Fisher information matrices of Eq.~(\ref{fisher}) for a dataset consisting of 500 Haar random quantum states. These calculations are performed across 20 different sets of training parameters, sampled from a uniform distribution, $\boldsymbol{\theta} \in [0,2\pi)^d$, where $d$ represents the number of total parameters in a model. Subsequently, the rank of each Fisher information matrix is evaluated for each set of training parameters, and the effective dimension is determined by taking the maximum rank obtained. Although, as defined by Eq.~(\ref{ED}), the effective dimension should represent the highest rank attainable across all possible training parameter settings, our findings suggest that 20 random parameter sets are sufficient to produce consistent results. 
+
+In our models, we observe an interesting trend in the gap between the effective dimensions of NC-DQML and CC-DQML. As can be seen in Fig.~\ref{fig5}\textbf{a}, this gap consistently remains at 14 across different numbers of convolutional sub-layers ($L$) even as the number of qubits in the QPUs increases from 2 to 8. However, we want to emphasize that this does not imply  classical communication offers only marginal benefits. In fact, CC-DQML's effective dimension reaches saturation at a higher $L$, leading to a larger difference at $L$ where NC-DQML's effective dimension has already saturated. For example, with two 4-qubit QPUs and $L=30$ convolutional sub-layers, we find that CC-DQML achieves an effective dimension of 278, whereas NC-DQML reaches 256. Additionally, this gap can vary depending on the pooling structure. For instance, the plot at the bottom of Fig.~\ref{fig5}\textbf{a}, which shows results for NC-DQML and QC-DQML with pooling layers in Fig.~\ref{fig5}\textbf{b}, indicates no difference between them. This suggests that further research is needed to fully understand and optimize the benefits of classical communication, especially in relation to the effective dimension gap.
+
+
+\begin{figure}[t!]
+\centering
+\includegraphics[width=\linewidth]{Fig5_final.eps}
+\caption{\textbf{Comparison of NC-DQML and CC-DQML.} \textbf{a}, The top three plots display the effective dimension of NC-DQML and CC-DQML using two QPUs with varying qubit counts. These estimations are based on the DQML models shown in Figs.~\ref{fig2}~and~\ref{fig4}\textbf{b}, utilizing Haar random datasets. The bottom plot presents the effective dimension of the simplified pooling layer. \textbf{b}, The simplified dumb pooling layer is introduced to explore how the structure of the pooling layer affects the effective dimension. In each QPU, all qubits except one are measured and a feedforward operation applied to the remaining qubit, similar to the red block shown in Fig.~\ref{fig4}\textbf{b}. 
+Specifically, three pairs of Z and X gates are applied to each qubit. The pooling layer reduces the number of qubits to one, so the DQML models consist of a single convolutional layer followed by a pooling layer when using two 4-qubit QPUs.
+}
+\label{fig5}
+\end{figure}
+
+
+
+\begin{table}[t!]
+\centering
+\begin{tabular}{      c||c|c|c|c  }
+
+ \hline
+
+ \multicolumn{5}{c}{Validation accuracy (\%)} \\
+ \hline
+ \multirow{2}{*}{$L$}  &   \multirow{2}{*}{non-DQML}   & \multirow{2}{*}{NC-DQML}  & \multirow{2}{*}{CC-DQML} & \multirow{2}{*}{QC-DQML}\\
+ &&&&\\
+
+ 
+ \hline
+
+ \multirow{3}{*}{3} &  70.57 $\pm$ 2.31  & 84.63 $\pm$ 1.28   & 89.98 $\pm$ 1.19 & 89.51 $\pm$ 2.07 \\[1pt]
+ & 71.23 $\pm$ 1.38 & 85.68 $\pm$ 2.35 & 86.74 $\pm$ 1.83 & 88.30 $\pm$ 1.67\\[1pt]
+ &  71.43 $\pm$ 2.24  & 86.97 $\pm$ 1.91   & 89.36 $\pm$ 1.07 & 87.13 $\pm$ 1.89\\
+
+ \hline
+ \multirow{3}{*}{5}  &75.51 $\pm$ 2.48 & 86.29 $\pm$ 1.92 & 93.12 $\pm$ 1.26 & 93.16 $\pm$ 1.50\\[1pt]
+ &74.04 $\pm$ 1.69 &88.59 $\pm$ 3.04 &91.05 $\pm$ 1.80 &91.89 $\pm$ 1.29\\[1pt]
+
+ &75.27 $\pm$ 1.72 & 90.92 $\pm$ 1.31 & 91.88 $\pm$ 1.80 & 91.68 $\pm$ 0.82\\
+ 
+
+\hline
+
+ \multirow{3}{*}{7}
+ & 75.12 $\pm$ 1.66 & 86.74 $\pm$ 1.05 & 95.96 $\pm$ 1.06 & 95.37 $\pm$ 1.17\\[1pt]
+ &75.18 $\pm$ 2.29 & 88.79 $\pm$ 2.22 & 95.25 $\pm$ 1.28 & 94.22 $\pm$ 0.93\\[1pt]
+& 76.88 $\pm$ 2.05 & 90.96 $\pm$ 0.94 & 94.43 $\pm$ 0.79 & 93.67 $\pm$ 1.11\\
+
+ \hline
+ \multirow{3}{*}{9}&78.09 $\pm$ 1.68 &88.11 $\pm$ 2.33 &96.76 $\pm$ 0.97 &96.00 $\pm$ 0.81\\[1pt]
+ & 77.27 $\pm$ 1.33 & 89.49 $\pm$ 2.76 & 96.00 $\pm$ 1.31 & 95.94 $\pm$ 0.85\\[1pt]
+&78.24 $\pm$ 1.31 &92.25 $\pm$ 1.53&96.52$\pm$ 0.98&95.70 $\pm$ 0.86\\
+\hline
+
+15 &81.66 $\pm$ 1.38 &87.58 $\pm$ 1.98 &98.63 $\pm$ 0.51 &98.01 $\pm$ 0.61\\[1pt]
+
+\hline
+
+ 20 &83.63 $\pm$ 0.73 &88.22 $\pm$ 1.35 &99.41 $\pm$ 0.36 &99.08 $\pm$ 0.41\\[1pt]
+
+\hline
+\end{tabular}
+\caption{\textbf{Binary classification accuracy.} The results are obtained using the (non-)DQML models illustrated in Figs.~\ref{fig2}~and~\ref{fig4}\textbf{b}.  For the non-DQML scheme, a single 4-qubit QPU is used, while two QPUs are employed for the three DQML schemes. The mean and standard deviation are calculated at 1000 training iterations from 10 trials with random initial parameters. The results listed in the first row for each $L$ correspond to those shown in Figs.~\ref{fig4}\textbf{c} and \textbf{d}, and the results for $L=15$ and $L=20$ are obtained from the same dataset.
+}
+\label{tab1}
+\end{table}
+
+
+\begin{table}[h!]
+\centering
+\begin{tabular}{      c||c|c|c  }
+
+ \hline
+
+ \multicolumn{4}{c}{Validation accuracy (\%)} \\
+ \hline
+ \multirow{2}{*}{$L$}  & \multirow{2}{*}{NC-DQML}  & \multirow{2}{*}{CC-DQML} & \multirow{2}{*}{QC-DQML}\\
+ &&&\\
+
+ 
+ \hline
+
+ \multirow{2}{*}{3} & 75.55 $\pm$ 2.87 & 82.54 $\pm$ 1.94 & 81.52 $\pm$ 3.26 \\[1pt]
+  &($\Delta=9.08$)&($\Delta=7.44$)&($\Delta=7.99$)\\
+
+ \hline
+ \multirow{2}{*}{5}   & 79.84 $\pm$ 1.90 & 82.7 $\pm$ 2.71 & 88.75 $\pm$ 1.08 \\[1pt]
+ &($\Delta=6.45$)&($\Delta=10.43$)&($\Delta=4.41$)\\
+ 
+\hline
+
+ \multirow{2}{*}{7}
+& 83.52 $\pm$ 2.97 & 87.07 $\pm$ 3.03 & 91.21 $\pm$ 1.72 \\[1pt]
+&($\Delta=3.22$)&($\Delta=8.89$)&($\Delta=4.16$)\\
+
+ \hline
+ \multirow{2}{*}{9} & 85.00 $\pm$ 2.58 & 87.23 $\pm$ 2.41 & 92.81 $\pm$ 0.42 \\[1pt]
+&($\Delta=3.11$)&($\Delta=9.53$)&($\Delta=3.18$)\\
+
+\hline
+\end{tabular}
+\caption{\textbf{Effectiveness of the interpret function.} The results are obtained using the DQML models illustrated in Figs.~\ref{fig2}~and~\ref{fig4}\textbf{b}. Unlike the results in Table\ref{tab1}, which employ the interpret function, here the measurement outcomes are post-processed using the parity interpretation. This significantly reduces classification accuracy. $\Delta$ denotes the difference compared to the results obtained with the interpret function. The mean and standard deviation are calculated at 1000 training iterations from 5 trials with random initial parameters, using the dataset employed for Figs.~\ref{fig4}\textbf{c} and \textbf{d}.}
+\label{tab2}
+\end{table}
+
+
+
+\section{Dataset synthesis and classification}\label{appB}
+
+To demonstrate the effectiveness of DQML, we generate synthetic datasets having a low linear correlation between each attribute and binary labels, which are designed to be challenging for binary classification tasks. For an 8-dimensional dataset, we start by uniformly sampling 2048 vectors, $\boldsymbol{x}=(x_1, x_2, ..., x_8)$, from within an 8-dimensional sphere of radius $\pi/4$: $\{\boldsymbol{x}|\sum_{i=1}^8 x_i^2<(\pi/4)^2\}$. Next, we randomly form 32 clusters and assign binary labels $f_\mathrm{label}\in\{-1,1\}$ to each cluster, ensuring that there is an equal number of -1 and 1 labels across all clusters. Each cluster contains 64 data instances, since 2048/32=64, and it is translated by randomly selected vectors $\boldsymbol{v}=(v_1,v_2,...,v_7,v_8)$ where $v_i\in\{-\pi/4,\pi/4\}$. Among the 2048 instances, 1536 instances are allocated to the training set and the remaining 512 instances are used for the validation set. To evaluate the linear correlation between individual attribute and the label, we calculate the Pearson correlation coefficient which is defined as $\rho_i=\mathrm{cov}(x_i,f_\mathrm{label})/\sigma_{x_i}\sigma_{f}$. Here, $\mathrm{cov}(x_i,f_\mathrm{label})$ represents the covariance of the attribute $x_i$ and the label $f_\mathrm{label}$, and $\sigma_{x_i}$ and $\sigma_{f}$ denote the standard deviations of the attribute and the labels, respectively, for the 2048 instances. The maximum correlation is estimated to be $\rho_\mathrm{max}=\mathrm{max}( \rho_i)=0.239$ for the dataset used for Figs.~\ref{fig4}\textbf{c} and \textbf{d}. This indicates that its binary classification would be challenging with only a subset of the attributes.
+
+
+We use synthetic datasets to numerically demonstrate binary classification using the PennyLane library~\cite{bergholm2018pennylane}. The Adam optimizer is configured with a step size of 0.05~\cite{kingma2014adam}, and each training iteration processes a batch of 512 instances. Initial training parameters for the convolutional and pooling layers are drawn from a uniform distribution $\boldsymbol{\theta} \in [0,2\pi)^d$, while the initial parameters for the interpret function in Eq.~(\ref{interpret}) is fixed to $\boldsymbol{w}=(1,-1,-1,1)$, which corresponds to the parity measurements.
+Table~\ref{tab1} presents the classification accuracy for the validation set using 4-qubit QPUs. Three datasets are tested, and each dataset was randomly generated using the previously described method. The results indicate that CC-DQML consistently outperforms both NC-DQML and non-DQML, and is competitive with QC-DQML for all the datasets.
+
+
+
+\begin{figure}[t!]
+\centering
+\includegraphics[width=\linewidth]{Fig6_final.eps}
+\caption{\textbf{Histogram of the Fisher information spectrum.} The histogram depicts the non-zero eigenvalue spectra of Fisher information matrices on a log scale for DQML schemes utilizing two 4-qubit QPUs with $L=4$ convolutional sub-layers. To avoid any potential bias, the histogram is obtained by accumulating the eigenvalues of 200 Fisher information matrices with 200 random training parameter sets, $\boldsymbol{\theta}$. Each Fisher information matrix is estimated using 200 Haar random quantum states as a dataset. The logarithmic bin width of the histogram is set to 0.02, and the standard deviations of the logarithms of the non-zero eigenvalues for NC-DQML, CC-DQML, and QC-DQML are estimated to be 1.383, 2.136, and 1.056, respectively.
+}
+\label{fig6}
+\end{figure}
+
+\section{Interpret function}\label{appC}
+Quantum communication allows for universal quantum operations between separate processors, enabling the generation of any desired correlations for data processing. In contrast, classical communication can only produce limited correlations, which may reduce its effectiveness. To overcome this limitation, we introduce the interpret function to post-process the measurement outcomes, expressed as $w_0 P[00]+w_1 P[01]+w_2 P[10]+w_3 P[11]$, where $P[ij]$ denotes the probability of measuring outcomes $i$ and $j$ from each QPU, and $\boldsymbol{w}=(w_0,w_1,w_2,w_3)$ represents the associated weights. These weights are optimized alongside the training parameters of the convolutional and pooling layers to obtain the best possible interpretation. Table~\ref{tab2} displays the classification accuracy of DQML schemes using the parity interpretation, ($P[00]- P[01]- P[10]+P[11]$), and the difference in accuracy with the results obtained using the interpret function. With the parity interpretation, CC-DQML achieves higher classification accuracy than NC-DQML but does not surpass QC-DQML. Given that CC-DQML shows comparable validation accuracy to QC-DQML in Table~\ref{tab1}, when using the interpret function, it highlights the effectiveness of the interpret function.
+
+
+
+
+
+\section{Fisher information spectrum}\label{appD}
+
+Fisher information spectrum offers a glimpse into the overall optimization landscape of a training model. While the effective dimension assesses capacity of a quantum circuit by examining the degeneracy of the Fisher information spectrum, the distribution of non-zero eigenvalues foreshadows quality of guidance a model offers.
+If the non-zero eigenvalues of a Fisher information matrix are concentrated near zero, the model is more likely to have poor trainability, potentially including the presence of a barren plateau~\cite{haug2021capacity,huembeli2021characterizing}. Note that small eigenvalues indicate small gradients in general during the learning process. To compare the Fisher information spectra of DQML schemes, we obtain the histogram of non-zero eigenvalues using Haar random quantum states (Fig.~\ref{fig6}). Since the relative values of non-zero eigenvalues are crucial for understanding the overall landscape, we plot the histogram on a log scale. The standard deviations of the logarithms of the non-zero eigenvalues for NC-, CC-, and QC-DQML are estimated to be 1.383, 2.136, and 1.056, respectively. This suggests that CC-DQML has  poorer trainability than QC-DQML, which explains the slower convergence of CC-DQML compared to QC-DQML, as can be seen in Fig.~\ref{fig4}\textbf{c}.
+
+
+
+
+\bigskip
+
+
+\bibliography{Bib}
+
+\end{document}
+
