@@ -1,0 +1,34 @@
+{
+  "experiment": {
+    "model": "cc_dqml",
+    "output_dir": "results/smoke_cc_dqml",
+    "dataset_seed": 0,
+    "init_seed": 0
+  },
+  "data": {
+    "n_features": 8,
+    "n_samples": 64,
+    "n_clusters": 8,
+    "train_size": 48,
+    "validation_size": 16,
+    "sphere_radius": 0.7853981633974483
+  },
+  "model": {
+    "qpus": 2,
+    "qubits_per_qpu": 4,
+    "convolutional_sub_layers": 1,
+    "communication": "classical",
+    "interpret_weights_initial": [
+      1.0,
+      -1.0,
+      -1.0,
+      1.0
+    ]
+  },
+  "training": {
+    "optimizer": "adam",
+    "learning_rate": 0.05,
+    "batch_size": 8,
+    "iterations": 2
+  }
+}

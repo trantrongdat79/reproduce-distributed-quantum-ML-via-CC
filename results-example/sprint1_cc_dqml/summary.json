@@ -1,0 +1,12 @@
+{
+  "model": "cc_dqml",
+  "communication": "classical",
+  "convolutional_sub_layers": 3.0,
+  "dataset_seed": 0.0,
+  "init_seed": 0.0,
+  "max_abs_pearson": 0.29602050772864086,
+  "train_loss": 0.8693989887472018,
+  "train_accuracy": 0.6783854166666666,
+  "validation_loss": 0.8750164760551251,
+  "validation_accuracy": 0.6875
+}
