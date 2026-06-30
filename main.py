@@ -1,17 +1,15 @@
 from __future__ import annotations
 
 import argparse
-import os
 import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent
 SRC = ROOT / "src"
-os.environ.setdefault("MPLCONFIGDIR", str(ROOT / ".cache" / "matplotlib"))
 if str(SRC) not in sys.path:
     sys.path.insert(0, str(SRC))
 
-from cc_dqml import load_config, run_experiment  # noqa: E402
+from cc_dqml import load_config, run_experiment
 
 
 def parse_args() -> argparse.Namespace:
