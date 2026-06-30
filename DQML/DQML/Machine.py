@@ -53,9 +53,9 @@ def DQML(scheme,depth,iteration,train_validation_set):
     num_train=train_validation_set[4]
     cost_list=[]
     acc_val_list=[]
-    bias=np.array([1,-1,-1,1])
+    bias=np.array([1.0,-1.0,-1.0,1.0])
     if scheme == 'QCDQML_1m':
-        bias=np.array([1,-1])
+        bias=np.array([1.0,-1.0])
 
     print(qml.draw(circuit,decimals=None)(weights,np.random.rand(8)))
     for it in range(iteration):

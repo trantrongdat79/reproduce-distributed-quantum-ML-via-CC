@@ -93,6 +93,5 @@ def RandParam(num_para):
     return np.array(P)
 
 def Haar_gate(w):
-    Haar_Unitary = np.array(qutip.random_objects.rand_unitary_haar(2**len(w)))
+    Haar_Unitary = qutip.rand_unitary(2**len(w), distribution="haar").full()
     qml.QubitUnitary(Haar_Unitary,wires=w)
-    
