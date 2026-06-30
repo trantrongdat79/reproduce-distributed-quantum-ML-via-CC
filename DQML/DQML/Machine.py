@@ -17,6 +17,13 @@ def DQML(scheme,depth,iteration,train_validation_set):
     num_val=512
     if scheme =='NCDQML' or scheme  == 'CCDQML':
         circuit=lambda x,y :circuit_44(scheme,depth,x,y)
+        # Similar to:
+        # def circuit(x, y):
+        #    return circuit_44(scheme, depth, x, y)
+        #
+        # This lambda “locks in” the current scheme and depth, so later the
+        # training code can call circuit using only weights and data_samples
+        
         num_qubits=8
 
     elif scheme =='non_DQML':
