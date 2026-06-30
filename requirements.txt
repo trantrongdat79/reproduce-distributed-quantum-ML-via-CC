@@ -1,9 +1,7 @@
 pennylane
 numpy
 scipy
-scikit-learn
 matplotlib
 pandas
-pyyaml
-tqdm
+qutip
 jupyter
